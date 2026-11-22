@@ -191,7 +191,6 @@ Trayectoria: infinito, `a = 3 m`, velocidad 0.4 m/s. Error transversal medido de
 
 El valor RMSE que imprime el nodo (0.064 m con L_d = 0.6 m) es algo mayor que el de la tabla, porque mide hasta el punto más cercano de la trayectoria y no hasta el segmento.
 
-![Comparación de lookahead](docs/lookahead_comparison.png)
 
 ### Datos
 
