@@ -1,4 +1,4 @@
-# Robot móvil Ackermann: Fusion 360 → Gazebo → ROS 2 (Pure Pursuit)
+# Robot móvil Ackermann
 
 Robot móvil con cinemática tipo Ackermann, modelado en Autodesk Fusion 360 y exportado a Xacro/URDF. Se simula en Gazebo Harmonic y se controla con un nodo de ROS 2 (Pure Pursuit) que recorre una trayectoria en forma de infinito (lemniscata de Bernoulli).
 
