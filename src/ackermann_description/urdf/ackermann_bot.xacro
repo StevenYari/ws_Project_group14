@@ -1,0 +1,274 @@
+<?xml version="1.0"?>
+<!--
+  Robot Ackermann - ROS 2 Jazzy + Gazebo Harmonic
+  Archivo AUTOCONTENIDO: materiales, links, joints, fricción y plugin.
+  Ya NO necesita materials.xacro, .ros2control ni .gazebo.
+
+  Convención del modelo (después del giro de 180° en base_footprint):
+    +X = frente | +Y = izquierda | +Z = arriba
+  Parámetros: L = 0.24 m | W = 0.14 m | r = 0.04 m | delta_max = 0.314 rad
+-->
+<robot name="ackermann_bot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ===== Parámetros (deben coincidir con el plugin) ===== -->
+  <xacro:property name="pkg" value="ackermann_description"/>
+  <xacro:property name="wheel_base" value="0.24"/>
+  <xacro:property name="wheel_sep" value="0.14"/>
+  <xacro:property name="kingpin" value="0.06"/>
+  <xacro:property name="wheel_radius" value="0.04"/>
+  <xacro:property name="wheel_width" value="0.02"/>
+  <xacro:property name="steer_limit_joint" value="0.314159"/>
+  <xacro:property name="steer_limit_plugin" value="0.28"/>
+
+  <!-- ===== Material ===== -->
+  <material name="red">
+    <color rgba="0.8 0.05 0.05 1.0"/>
+  </material>
+  <material name="black">
+    <color rgba="0.08 0.08 0.08 1.0"/>
+  </material>
+
+  <!-- ===== Raíz: gira 180° porque en el CAD el frente apuntaba a -X ===== -->
+  <link name="base_footprint"/>
+
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 3.14159265"/>
+  </joint>
+
+  <!-- ===== Chasis ===== -->
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0.004185737176385033 0.0 0.09204715440993937" rpy="0 0 0"/>
+      <mass value="10.029660093227195"/>
+      <inertia ixx="0.011364" iyy="0.065867" izz="0.070525" ixy="0.0" iyz="0.0" ixz="0.001884"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="file://$(find ${pkg})/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="file://$(find ${pkg})/meshes/base_link.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- ===== Macro de rueda: colisión = cilindro (la malla da problemas) ===== -->
+  <!-- side_y: -0.01 para ruedas I, +0.01 para ruedas D (offset del centro de masa) -->
+  <xacro:macro name="wheel_link" params="name mesh vx vy vz side_y">
+    <link name="${name}">
+      <inertial>
+        <origin xyz="0.0 ${side_y} 0.0" rpy="0 0 0"/>
+        <mass value="0.789168074581756"/>
+        <inertia ixx="0.000342" iyy="0.000631" izz="0.000342" ixy="0.0" iyz="0.0" ixz="0.0"/>
+      </inertial>
+      <visual>
+        <origin xyz="${vx} ${vy} ${vz}" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="file://$(find ${pkg})/meshes/${mesh}.stl" scale="0.001 0.001 0.001"/>
+        </geometry>
+        <material name="black"/>
+      </visual>
+      <collision>
+        <origin xyz="0 ${side_y} 0" rpy="1.5708 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+    </link>
+  </xacro:macro>
+
+  <!-- Ruedas (mismos offsets visuales que exportó Fusion) -->
+  <xacro:wheel_link name="delantera_I_1" mesh="delantera_I_1" vx="0.12"  vy="0.06"  vz="-0.04" side_y="-0.01"/>
+  <xacro:wheel_link name="trasera_I_1"   mesh="trasera_I_1"   vx="-0.12" vy="0.06"  vz="-0.04" side_y="-0.01"/>
+  <xacro:wheel_link name="delantera_D_1" mesh="delantera_D_1" vx="0.12"  vy="-0.06" vz="-0.04" side_y="0.01"/>
+  <xacro:wheel_link name="trasera_D_1"   mesh="trasera_D_1"   vx="-0.12" vy="-0.06" vz="-0.04" side_y="0.01"/>
+
+  <!-- ===== Pivotes de dirección ===== -->
+  <link name="union_D_1">
+    <inertial>
+      <origin xyz="-2.299826995511012e-13 0.005865344619846002 -0.0235336638450385" rpy="0 0 0"/>
+      <mass value="0.1681845069920412"/>
+      <inertia ixx="3.9e-05" iyy="2.4e-05" izz="2.4e-05" ixy="0.0" iyz="6e-06" ixz="0.0"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.12 -0.03 -0.07" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="file://$(find ${pkg})/meshes/union_D_1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin xyz="0.12 -0.03 -0.07" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="file://$(find ${pkg})/meshes/union_D_1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <link name="union_I_1">
+    <inertial>
+      <origin xyz="7.666089985036706e-14 -0.005865344619846009 -0.0235336638450385" rpy="0 0 0"/>
+      <mass value="0.1681845069920412"/>
+      <inertia ixx="3.9e-05" iyy="2.4e-05" izz="2.4e-05" ixy="0.0" iyz="-6e-06" ixz="0.0"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.12 0.03 -0.07" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="file://$(find ${pkg})/meshes/union_I_1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+    <collision>
+      <origin xyz="0.12 0.03 -0.07" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="file://$(find ${pkg})/meshes/union_I_1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- ===== LiDAR (opcional con 3 integrantes; sin colisión para no verse a sí mismo) ===== -->
+  <link name="lidar_1">
+    <inertial>
+      <origin xyz="1.0052123437711858e-17 0.0 -0.0050000000000000044" rpy="0 0 0"/>
+      <mass value="0.2219535209761188"/>
+      <inertia ixx="5.2e-05" iyy="5.2e-05" izz="0.0001" ixy="0.0" iyz="0.0" ixz="0.0"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 -0.15" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="file://$(find ${pkg})/meshes/lidar_1.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+
+  <!-- ===== JOINTS (ejes corregidos para el giro de 180°) ===== -->
+  <!-- Ruedas traseras: tracción -->
+  <joint name="trasera_I_joint" type="continuous">
+    <origin xyz="0.12 -0.06 0.04" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="trasera_I_1"/>
+    <axis xyz="0 -1 0"/>
+  </joint>
+
+  <joint name="trasera_D_joint" type="continuous">
+    <origin xyz="0.12 0.06 0.04" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="trasera_D_1"/>
+    <axis xyz="0 -1 0"/>
+  </joint>
+
+  <!-- Pivotes de dirección -->
+  <joint name="union_I_joint" type="revolute">
+    <origin xyz="-0.12 -0.03 0.07" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="union_I_1"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-${steer_limit_joint}" upper="${steer_limit_joint}" effort="100" velocity="10"/>
+  </joint>
+
+  <joint name="union_D_joint" type="revolute">
+    <origin xyz="-0.12 0.03 0.07" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="union_D_1"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-${steer_limit_joint}" upper="${steer_limit_joint}" effort="100" velocity="10"/>
+  </joint>
+
+  <!-- Ruedas delanteras (cuelgan de los pivotes) -->
+  <joint name="delantera_I_joint" type="continuous">
+    <origin xyz="0.0 -0.03 -0.03" rpy="0 0 0"/>
+    <parent link="union_I_1"/>
+    <child link="delantera_I_1"/>
+    <axis xyz="0 -1 0"/>
+  </joint>
+
+  <joint name="delantera_D_joint" type="continuous">
+    <origin xyz="0.0 0.03 -0.03" rpy="0 0 0"/>
+    <parent link="union_D_1"/>
+    <child link="delantera_D_1"/>
+    <axis xyz="0 -1 0"/>
+  </joint>
+
+  <!-- LiDAR -->
+  <joint name="lidar_joint" type="fixed">
+    <origin xyz="0.0 0.0 0.15" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="lidar_1"/>
+  </joint>
+
+  <!-- ===== Gazebo: fricción (sin <material> de Classic, sin self_collide) ===== -->
+  <gazebo reference="base_link">
+    <mu1>0.2</mu1><mu2>0.2</mu2>
+  </gazebo>
+
+  <gazebo reference="trasera_I_1"><mu1>1.0</mu1><mu2>1.0</mu2></gazebo>
+  <gazebo reference="trasera_D_1"><mu1>1.0</mu1><mu2>1.0</mu2></gazebo>
+  <gazebo reference="delantera_I_1"><mu1>1.0</mu1><mu2>1.0</mu2></gazebo>
+  <gazebo reference="delantera_D_1"><mu1>1.0</mu1><mu2>1.0</mu2></gazebo>
+
+  <!-- ===== Gazebo: plugins ===== -->
+  <gazebo>
+    <plugin filename="gz-sim-ackermann-steering-system"
+            name="gz::sim::systems::AckermannSteering">
+      <left_joint>trasera_I_joint</left_joint>
+      <right_joint>trasera_D_joint</right_joint>
+      <left_steering_joint>union_I_joint</left_steering_joint>
+      <right_steering_joint>union_D_joint</right_steering_joint>
+
+      <kingpin_width>${kingpin}</kingpin_width>
+      <steering_limit>${steer_limit_plugin}</steering_limit>
+      <wheel_base>${wheel_base}</wheel_base>
+      <wheel_separation>${wheel_sep}</wheel_separation>
+      <wheel_radius>${wheel_radius}</wheel_radius>
+
+      <min_velocity>-1.0</min_velocity>
+      <max_velocity>1.0</max_velocity>
+      <min_acceleration>-3</min_acceleration>
+      <max_acceleration>3</max_acceleration>
+
+      <topic>cmd_vel</topic>
+      <odom_topic>odom</odom_topic>
+      <frame_id>odom</frame_id>
+      <child_frame_id>base_footprint</child_frame_id>
+      <tf_topic>/tf</tf_topic>
+      <odom_publish_frequency>50</odom_publish_frequency>
+    </plugin>
+
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher"/>
+  </gazebo>
+
+  <!--
+  LIDAR - NO vamos a usar
+  Requiere en el mundo SDF el sistema gz-sim-sensors-system (render_engine ogre2).
+
+  <gazebo reference="lidar_1">
+    <sensor name="lidar" type="gpu_lidar">
+      <topic>scan</topic>
+      <update_rate>10</update_rate>
+      <gz_frame_id>lidar_1</gz_frame_id>
+      <always_on>true</always_on>
+      <visualize>false</visualize>
+      <lidar>
+        <scan>
+          <horizontal>
+            <samples>640</samples>
+            <min_angle>-3.14159</min_angle>
+            <max_angle>3.14159</max_angle>
+          </horizontal>
+        </scan>
+        <range><min>0.12</min><max>12.0</max></range>
+      </lidar>
+    </sensor>
+  </gazebo>
+  -->
+
+</robot>
