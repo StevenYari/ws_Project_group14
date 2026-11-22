@@ -2,7 +2,7 @@
 
 Robot móvil con cinemática tipo Ackermann, modelado en Autodesk Fusion 360 y exportado a Xacro/URDF. Se simula en Gazebo Harmonic y se controla con un nodo de ROS 2 (Pure Pursuit) que recorre una trayectoria en forma de infinito (lemniscata de Bernoulli).
 
-**Integrantes:** _[Steven Yari]_, _[Cristhian Aldean]_, _[Alexa Marin]_
+**Integrantes:** _Steven Yari_, _Cristhian Aldean_, _Alexa Marin_
 **Curso:** Robots Móviles y Articulados, ESPOL
 
 ---
