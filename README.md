@@ -1,24 +1,24 @@
-# Robot móvil Ackermann: Fusion 360 → Gazebo → ROS 2 (Pure Pursuit)
+# Ackermann Mobile Robot
 
-Robot móvil con cinemática tipo Ackermann, modelado en Autodesk Fusion 360 y exportado a Xacro/URDF. Se simula en Gazebo Harmonic y se controla con un nodo de ROS 2 (Pure Pursuit) que recorre una trayectoria en forma de infinito (lemniscata de Bernoulli).
+Ackermann-steered mobile robot modeled in Autodesk Fusion 360 and exported to Xacro/URDF. The robot is simulated in Gazebo Harmonic and controlled by a ROS 2 node implementing the Pure Pursuit algorithm, which follows a figure-eight trajectory (Bernoulli lemniscate).
 
-**Integrantes:** _[Steven Yari]_, _[Cristhian Aldean]_, _[Alexa Marin]_
-**Curso:** Robots Móviles y Articulados, ESPOL
+**Team Members:** _Steven Yari_, _Cristhian Aldean_, _Alexa Marin_  
+**Course:** Mobile and Articulated Robots, ESPOL
 
 ---
 
-## 1. Requisitos
+## 1. Requirements
 
-| Componente | Versión |
+| Component | Version |
 |---|---|
-| Sistema operativo | Ubuntu 24.04 LTS |
+| Operating System | Ubuntu 24.04 LTS |
 | ROS 2 | **Jazzy Jalisco** (desktop) |
-| Simulador | **Gazebo Harmonic** (`gz sim`, versión 8.x), instalado con `ros-jazzy-ros-gz` |
-| Python | 3.12 (el de Ubuntu 24.04) |
+| Simulator | **Gazebo Harmonic** (`gz sim`, version 8.x), installed via `ros-jazzy-ros-gz` |
+| Python | 3.12 (Ubuntu 24.04 default version) |
 
-> ROS 2 Humble no está soportado: el plugin Ackermann (`gz-sim-ackermann-steering-system`) y los launch usan Gazebo Harmonic.
+> ROS 2 Humble is not supported. The Ackermann plugin (`gz-sim-ackermann-steering-system`) and launch files require Gazebo Harmonic.
 
-### Dependencias
+### Dependencies
 
 ```bash
 sudo apt update
@@ -28,7 +28,7 @@ sudo apt install ros-jazzy-ros-gz ros-jazzy-xacro ros-jazzy-robot-state-publishe
 
 ---
 
-## 2. Compilar
+## 2. Build
 
 ```bash
 git clone https://github.com/StevenYari/ws_Project_group14.git
@@ -40,50 +40,53 @@ colcon build --symlink-install
 source install/setup.bash
 ```
 
-La compilación debe terminar con `Summary: 2 packages finished`.
+The build should finish with:
 
-Comprobación rápida del modelo (opcional):
+`Summary: 2 packages finished`
+
+Optional model validation:
 
 ```bash
 xacro src/ackermann_description/urdf/ackermann_bot.xacro > /tmp/r.urdf
-check_urdf /tmp/r.urdf      # debe decir "Successfully Parsed XML"
+check_urdf /tmp/r.urdf      # Should display "Successfully Parsed XML"
 ```
 
 ---
 
-## 3. Ejecutar la simulación
+## 3. Running the Simulation
 
-En **una sola terminal** (con los dos `source` hechos):
+Run the following command in **a single terminal**, after sourcing both ROS 2 and the workspace:
 
 ```bash
 ros2 launch ackermann_description full_sim.launch.py
 ```
 
-Qué ocurre:
+What happens:
 
-1. Se abre Gazebo con un mundo vacío y aparece el robot (rojo y negro).
-2. Se activa el bridge ROS ↔ Gazebo (`/cmd_vel`, `/odom`, `/tf`, `/clock`, `/joint_states`).
-3. A los 10 s arranca el controlador y el robot recorre el ∞ (unos 40 s de tiempo simulado).
-4. Al terminar se detiene y la terminal imprime una línea como:
-   `FIN. Duracion 40.7 s | RMSE cte = 0.064 m | cte max = 0.128 m | CSV: ...`
+1. Gazebo starts with an empty world and the robot appears (red and black).
+2. The ROS ↔ Gazebo bridge is activated (`/cmd_vel`, `/odom`, `/tf`, `/clock`, `/joint_states`).
+3. After 10 seconds, the controller starts and the robot follows the figure-eight trajectory (approximately 40 seconds of simulated time).
+4. At the end, the robot stops and the terminal prints a summary similar to:
 
-Gazebo queda abierto hasta que lo cierres con `Ctrl+C`.
+   `FIN. Duration 40.7 s | RMSE cte = 0.064 m | max cte = 0.128 m | CSV: ...`
 
-Si tu equipo es lento o corre en una máquina virtual, el tiempo real será mayor que el simulado (el recorrido puede tardar cerca de un minuto).
+Gazebo remains open until you close it using `Ctrl+C`.
 
-### Argumentos del launch
+If your computer is slow or you are running the simulation inside a virtual machine, real execution time will be longer than simulated time. The trajectory may take approximately one minute to complete.
 
-| Argumento | Valor por defecto | Descripción |
+### Launch Arguments
+
+| Argument | Default Value | Description |
 |---|---|---|
-| `path_type` | `lemniscate` | `lemniscate` (infinito), `circle` u `oval` |
-| `lookahead` | `0.6` | distancia de anticipación L_d del Pure Pursuit [m] |
-| `speed` | `0.4` | velocidad lineal constante [m/s] |
-| `size` | `3.0` | infinito: semilargo `a` [m]; el radio mínimo de curvatura es `a/3` |
-| `radius` | `1.5` | radio del círculo o de las curvas del óvalo [m] |
-| `straight` | `2.0` | largo de las rectas del óvalo [m] |
-| `delay` | `10.0` | segundos de espera antes de arrancar el controlador |
+| `path_type` | `lemniscate` | `lemniscate` (figure-eight), `circle`, or `oval` |
+| `lookahead` | `0.6` | Pure Pursuit lookahead distance L_d [m] |
+| `speed` | `0.4` | Constant linear velocity [m/s] |
+| `size` | `3.0` | For the lemniscate: semi-major length `a` [m]; minimum curvature radius is `a/3` |
+| `radius` | `1.5` | Radius of the circle or oval curves [m] |
+| `straight` | `2.0` | Length of the oval straight sections [m] |
+| `delay` | `10.0` | Delay before the controller starts [s] |
 
-Ejemplos:
+Examples:
 
 ```bash
 ros2 launch ackermann_description full_sim.launch.py lookahead:=0.6
@@ -91,118 +94,119 @@ ros2 launch ackermann_description full_sim.launch.py path_type:=circle radius:=1
 ros2 launch ackermann_description full_sim.launch.py speed:=0.3 size:=3.5
 ```
 
-El radio mínimo de giro del robot es de unos 0.83 m, así que cualquier trayectoria debe tener radio de curvatura mayor. El nodo avisa con un `WARN` si la trayectoria pide más curvatura de la que el robot puede dar.
+The robot has a minimum turning radius of approximately 0.83 m. Therefore, any trajectory must have a curvature radius greater than this value. The node displays a `WARN` message if the requested trajectory exceeds the robot's steering capabilities.
 
-### Ejecutar simulación y controlador por separado
+### Running the Simulation and Controller Separately
 
 ```bash
-# Terminal 1: simulación (Gazebo + robot + bridge)
+# Terminal 1: Simulation (Gazebo + robot + bridge)
 ros2 launch ackermann_description sim.launch.py
 
-# Terminal 2: controlador
+# Terminal 2: Controller
 ros2 run ackermann_control pure_pursuit --ros-args -p use_sim_time:=true -p lookahead:=0.6
 ```
 
-### Mover el robot a mano (prueba rápida)
+### Manual Robot Control (Quick Test)
 
 ```bash
 ros2 topic pub -r 10 /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.3}, angular: {z: 0.3}}"
-ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist "{}"     # detener
+ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist "{}"     # Stop
 ```
 
 ---
 
-## 4. Estructura del repositorio
+## 4. Repository Structure
 
-```
+```text
 ws_Project_group14/
 ├── README.md
-├── docs/                         # figuras de resultados
-├── tools/plot_results.py         # gráficas y métricas a partir de los CSV
+├── docs/                         # Results figures
+├── tools/plot_results.py         # Plots and metrics generated from CSV files
 └── src/
-    ├── ackermann_description/    # modelo del robot y simulación
+    ├── ackermann_description/    # Robot model and simulation
     │   ├── urdf/ackermann_bot.xacro
-    │   ├── meshes/*.stl          # piezas exportadas de Fusion 360
+    │   ├── meshes/*.stl          # Parts exported from Fusion 360
     │   └── launch/
     │       ├── sim.launch.py         # Gazebo + robot + bridge
-    │       └── full_sim.launch.py    # sim + controlador (un solo comando)
-    └── ackermann_control/        # controlador
+    │       └── full_sim.launch.py    # Simulation + controller (single command)
+    └── ackermann_control/        # Robot controller
         └── ackermann_control/pure_pursuit.py
 ```
 
 ---
 
-## 5. Robot y modelo
+## 5. Robot and Model
 
-Valores tomados del URDF exportado de Fusion 360.
+Values obtained from the URDF exported from Fusion 360.
 
-| Parámetro | Valor |
+| Parameter | Value |
 |---|---|
-| Distancia entre ejes L | 0.24 m |
-| Ancho de vía W | 0.14 m |
-| Distancia entre pivotes | 0.06 m |
-| Radio de rueda | 0.04 m |
-| Ángulo máximo de dirección (plugin / límite mecánico) | 0.28 rad / 0.314 rad |
-| Radio mínimo de giro | ≈ 0.83 m |
-| Masa total | ≈ 13.7 kg |
-| Tracción / dirección | ruedas traseras / ruedas delanteras |
+| Wheelbase L | 0.24 m |
+| Track width W | 0.14 m |
+| Distance between steering pivots | 0.06 m |
+| Wheel radius | 0.04 m |
+| Maximum steering angle (plugin / mechanical limit) | 0.28 rad / 0.314 rad |
+| Minimum turning radius | ≈ 0.83 m |
+| Total mass | ≈ 13.7 kg |
+| Drive / Steering | Rear wheels / Front wheels |
 
-Notas del modelo:
+### Model Notes
 
-- El CAD tenía el frente del robot hacia −X. El Xacro lo corrige con un link raíz `base_footprint` girado 180° y con los ejes de los joints ajustados.
-- Las colisiones de las ruedas son cilindros, y la fricción de las ruedas es μ = 1.0.
-- El link del LiDAR (`lidar_1`) está modelado, pero el sensor está desactivado: este grupo no implementa SLAM.
-- El plugin de Gazebo es `gz-sim-ackermann-steering-system`: recibe `/cmd_vel` y publica `/odom` y `/tf`.
+- The CAD model originally had the front of the robot facing the −X direction. This is corrected in Xacro using a root link called `base_footprint`, rotated 180°, with adjusted joint axes.
+- Wheel collision geometries are cylinders, and wheel friction is set to μ = 1.0.
+- The LiDAR link (`lidar_1`) is modeled, but the sensor is disabled. This project does not implement SLAM.
+- The Gazebo plugin is `gz-sim-ackermann-steering-system`. It receives `/cmd_vel` and publishes `/odom` and `/tf`.
 
-### Modelo cinemático (bicicleta, referencia en el eje trasero)
+### Kinematic Model (Bicycle Model, Rear Axle Reference)
 
-```
+```text
 ẋ = v·cosθ      ẏ = v·sinθ      θ̇ = (v/L)·tanδ
 R = L / tanδ     R_min = L / tan δ_max
 ```
 
 ---
 
-## 6. Controlador: Pure Pursuit
+## 6. Controller: Pure Pursuit
 
-1. Lee la pose de `/odom` y la traslada al eje trasero (0.12 m detrás del origen del modelo).
-2. Busca el punto de la trayectoria más cercano y, desde él, el punto objetivo a distancia **L_d**.
-3. Calcula la curvatura **κ = 2·sin(α) / L_d**, con α el ángulo entre la orientación del robot y el punto objetivo, y la satura a la curvatura máxima del robot.
-4. Publica `v` y `ω = v·κ` en `/cmd_vel`. El plugin de Gazebo los convierte en los ángulos de dirección de cada rueda.
-5. Al llegar al final, publica velocidad cero y guarda los resultados.
+The Pure Pursuit controller follows these steps:
 
-Trayectoria por defecto: lemniscata de Bernoulli con `a = 3 m` (6 m de largo, 15.7 m de recorrido, radio mínimo de curvatura 1.0 m).
+1. Reads the robot pose from `/odom` and transforms it to the rear axle reference point (0.12 m behind the model origin).
+2. Finds the closest point on the trajectory and then determines the target point at a lookahead distance of **L_d**.
+3. Calculates the curvature using **κ = 2·sin(α) / L_d**, where α is the angle between the robot's heading and the target point. The curvature is limited to the robot's maximum steering curvature.
+4. Publishes `v` and `ω = v·κ` to `/cmd_vel`. The Gazebo plugin converts these commands into the steering angles of each wheel.
+5. When the robot reaches the end of the trajectory, it publishes zero velocity and saves the results.
+
+Default trajectory: Bernoulli lemniscate with `a = 3 m` (6 m long, 15.7 m total path length, and minimum curvature radius of 1.0 m).
 
 ---
 
-## 7. Resultados
+## 7. Results
 
-Trayectoria: infinito, `a = 3 m`, velocidad 0.4 m/s. Error transversal medido desde el eje trasero hasta el segmento más cercano de la trayectoria.
+Trajectory: figure-eight, `a = 3 m`, velocity = 0.4 m/s. Cross-track error is measured from the rear axle to the closest trajectory segment.
 
-| L_d [m] | Completó | RMSE [cm] | Error máx. [cm] | Dirección saturada |
+| L_d [m] | Completed | RMSE [cm] | Max Error [cm] | Steering Saturation |
 |---|---|---|---|---|
-| 0.4 | No (inestable) | 58.3 | 155.5 | 80 % |
-| 0.6 | Sí | **6.1** | 12.4 | 3.6 % |
-| 1.0 | Sí | 8.7 | 14.4 | 1.8 % |
+| 0.4 | No (unstable) | 58.3 | 155.5 | 80% |
+| 0.6 | Yes | **6.1** | 12.4 | 3.6% |
+| 1.0 | Yes | 8.7 | 14.4 | 1.8% |
 
-- Con L_d = 0.4 m el robot oscila y pierde la trayectoria.
-- Con L_d = 0.6 m es la más precisa.
-- Con L_d = 1.0 m es la más suave, pero se abre más en las curvas.
+### Analysis
 
-El valor RMSE que imprime el nodo (0.064 m con L_d = 0.6 m) es algo mayor que el de la tabla, porque mide hasta el punto más cercano de la trayectoria y no hasta el segmento.
+- With L_d = 0.4 m, the robot oscillates and loses track of the trajectory.
+- With L_d = 0.6 m, the controller achieves the highest tracking accuracy.
+- With L_d = 1.0 m, the motion is smoother, but the robot takes wider turns.
 
-![Comparación de lookahead](docs/lookahead_comparison.png)
+The RMSE value printed by the node (0.064 m with L_d = 0.6 m) is slightly higher than the value in the table because it measures the distance to the closest trajectory point rather than to the closest trajectory segment.
 
-### Datos
+### Data Logging
 
-Cada corrida guarda en `~/ackermann_results/`:
+Each simulation run saves its results in `~/ackermann_results/`:
 
 - `run_*.csv`: `t, x, y, yaw, v_cmd, w_cmd, delta_est, target_x, target_y, cte`
-- `path_*.csv`: trayectoria deseada (`x, y`)
-
+- `path_*.csv`: Desired trajectory (`x, y`)
 
 ---
 
-## 8. Licencia
+## 8. License
 
-MIT.
+MIT License.
