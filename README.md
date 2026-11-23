@@ -26,6 +26,12 @@ sudo apt install ros-jazzy-ros-gz ros-jazzy-xacro ros-jazzy-robot-state-publishe
                  python3-colcon-common-extensions python3-rosdep liburdfdom-tools
 ```
 
+Optional, only to generate the result plots (`tools/plot_results.py`):
+
+```bash
+sudo apt install python3-pandas python3-matplotlib
+```
+
 ---
 
 ## 2. Build
@@ -39,6 +45,8 @@ rosdep install --from-paths src --ignore-src -r -y
 colcon build --symlink-install
 source install/setup.bash
 ```
+
+If `rosdep` reports that it is not initialized, run `sudo rosdep init` and `rosdep update` once, then repeat the `rosdep install` command.
 
 The build should finish with:
 
@@ -68,7 +76,7 @@ What happens:
 3. After 10 seconds, the controller starts and the robot follows the figure-eight trajectory (approximately 40 seconds of simulated time).
 4. At the end, the robot stops and the terminal prints a summary similar to:
 
-   `FIN. Duration 40.7 s | RMSE cte = 0.064 m | max cte = 0.128 m | CSV: ...`
+   `FIN. Duracion 40.7 s | RMSE cte = 0.064 m | cte max = 0.128 m | CSV: ...`
 
 Gazebo remains open until you close it using `Ctrl+C`.
 
@@ -81,7 +89,7 @@ If your computer is slow or you are running the simulation inside a virtual mach
 | `path_type` | `lemniscate` | `lemniscate` (figure-eight), `circle`, or `oval` |
 | `lookahead` | `0.6` | Pure Pursuit lookahead distance L_d [m] |
 | `speed` | `0.4` | Constant linear velocity [m/s] |
-| `size` | `3.0` | For the lemniscate: semi-major length `a` [m]; minimum curvature radius is `a/3` |
+| `size` | `3.0` | For the lemniscate: parameter `a` [m]; total length is `2a` and the minimum curvature radius is `a/3` |
 | `radius` | `1.5` | Radius of the circle or oval curves [m] |
 | `straight` | `2.0` | Length of the oval straight sections [m] |
 | `delay` | `10.0` | Delay before the controller starts [s] |
@@ -89,12 +97,14 @@ If your computer is slow or you are running the simulation inside a virtual mach
 Examples:
 
 ```bash
-ros2 launch ackermann_description full_sim.launch.py lookahead:=0.6
+ros2 launch ackermann_description full_sim.launch.py lookahead:=0.8
 ros2 launch ackermann_description full_sim.launch.py path_type:=circle radius:=1.5
 ros2 launch ackermann_description full_sim.launch.py speed:=0.3 size:=3.5
 ```
 
 The robot has a minimum turning radius of approximately 0.83 m. Therefore, any trajectory must have a curvature radius greater than this value. The node displays a `WARN` message if the requested trajectory exceeds the robot's steering capabilities.
+
+Note: use `lemniscate` (not `infinity`) as `path_type` in the launch file. ROS parses the word `infinity` as a numeric value.
 
 ### Running the Simulation and Controller Separately
 
@@ -130,22 +140,23 @@ ws_Project_group14/
     │       ├── sim.launch.py         # Gazebo + robot + bridge
     │       └── full_sim.launch.py    # Simulation + controller (single command)
     └── ackermann_control/        # Robot controller
-        └── ackermann_control/pure_pursuit.py
+        └── ackermann_control/pure_pursuit.py   # Trajectory generation + Pure Pursuit
 ```
 
 ---
 
 ## 5. Robot and Model
 
-Values obtained from the URDF exported from Fusion 360.
+Values obtained from the URDF exported from Fusion 360 and confirmed against the CAD model.
 
 | Parameter | Value |
 |---|---|
 | Wheelbase L | 0.24 m |
-| Track width W | 0.14 m |
-| Distance between steering pivots | 0.06 m |
+| Track width W (wheel to wheel) | 0.14 m |
+| Distance between steering pivots (kingpins) | 0.06 m |
 | Wheel radius | 0.04 m |
-| Maximum steering angle (plugin / mechanical limit) | 0.28 rad / 0.314 rad |
+| Wheel width | 0.02 m |
+| Maximum steering angle (plugin / mechanical limit) | 0.28 rad (16°) / 0.314 rad (18°) |
 | Minimum turning radius | ≈ 0.83 m |
 | Total mass | ≈ 13.7 kg |
 | Drive / Steering | Rear wheels / Front wheels |
@@ -153,9 +164,10 @@ Values obtained from the URDF exported from Fusion 360.
 ### Model Notes
 
 - The CAD model originally had the front of the robot facing the −X direction. This is corrected in Xacro using a root link called `base_footprint`, rotated 180°, with adjusted joint axes.
-- Wheel collision geometries are cylinders, and wheel friction is set to μ = 1.0.
+- Collision geometry: the four wheels use cylinders; the chassis and the steering pivots keep their STL meshes; the LiDAR link has no collision. Wheel friction is set to μ = 1.0 (chassis: 0.2).
+- The plugin limit of 0.28 rad is the central (virtual) steering angle. It is chosen so that the inner front wheel, which turns more, stays below the 0.314 rad joint limit.
 - The LiDAR link (`lidar_1`) is modeled, but the sensor is disabled. This project does not implement SLAM.
-- The Gazebo plugin is `gz-sim-ackermann-steering-system`. It receives `/cmd_vel` and publishes `/odom` and `/tf`.
+- The Gazebo plugin is `gz-sim-ackermann-steering-system`. It receives `/cmd_vel` and publishes `/odom` and `/tf`, and it computes the individual steering angle of each front wheel.
 
 ### Kinematic Model (Bicycle Model, Rear Axle Reference)
 
@@ -172,11 +184,18 @@ The Pure Pursuit controller follows these steps:
 
 1. Reads the robot pose from `/odom` and transforms it to the rear axle reference point (0.12 m behind the model origin).
 2. Finds the closest point on the trajectory and then determines the target point at a lookahead distance of **L_d**.
-3. Calculates the curvature using **κ = 2·sin(α) / L_d**, where α is the angle between the robot's heading and the target point. The curvature is limited to the robot's maximum steering curvature.
+3. Calculates the curvature using **κ = 2·sin(α) / L_d**, where α is the angle between the robot's heading and the target point. The curvature is clipped to the robot's maximum steering curvature (tan δ_max / L ≈ 1.20 m⁻¹).
 4. Publishes `v` and `ω = v·κ` to `/cmd_vel`. The Gazebo plugin converts these commands into the steering angles of each wheel.
 5. When the robot reaches the end of the trajectory, it publishes zero velocity and saves the results.
 
-Default trajectory: Bernoulli lemniscate with `a = 3 m` (6 m long, 15.7 m total path length, and minimum curvature radius of 1.0 m).
+Default trajectory: Bernoulli lemniscate with `a = 3 m`:
+
+```text
+x(t) = a·cos t / (1 + sin² t)
+y(t) = a·sin t·cos t / (1 + sin² t)
+```
+
+It is 6 m long and 2.1 m wide, with 15.7 m of total path length and a minimum curvature radius of 1.0 m (maximum curvature 1.0 m⁻¹, below the 1.20 m⁻¹ limit of the robot). The path is generated relative to the starting pose of the robot.
 
 ---
 
@@ -186,15 +205,19 @@ Trajectory: figure-eight, `a = 3 m`, velocity = 0.4 m/s. Cross-track error is me
 
 | L_d [m] | Completed | RMSE [cm] | Max Error [cm] | Steering Saturation |
 |---|---|---|---|---|
-| 0.4 | No (unstable) | 58.3 | 155.5 | 80% |
+| 0.4 | No (unstable)* | 58.3 | 155.5 | 80% |
 | 0.6 | Yes | **6.1** | 12.4 | 3.6% |
 | 1.0 | Yes | 8.7 | 14.4 | 1.8% |
+
+\* The run with L_d = 0.4 m was stopped manually after the robot lost the trajectory (54 s).
+
+Steering saturation is the percentage of samples in which the curvature command is clipped at the steering limit (δ = 16°).
 
 ### Analysis
 
 - With L_d = 0.4 m, the robot oscillates and loses track of the trajectory.
-- With L_d = 0.6 m, the controller achieves the highest tracking accuracy.
-- With L_d = 1.0 m, the motion is smoother, but the robot takes wider turns.
+- With L_d = 0.6 m, the controller achieves the highest tracking accuracy. The largest error (≈12 cm) occurs inside the lobes, not at the central crossing.
+- With L_d = 1.0 m, the motion is smoother, but the robot takes wider turns (it stays on the outside of the curves).
 
 The RMSE value printed by the node (0.064 m with L_d = 0.6 m) is slightly higher than the value in the table because it measures the distance to the closest trajectory point rather than to the closest trajectory segment.
 
@@ -206,6 +229,14 @@ Each simulation run saves its results in `~/ackermann_results/`:
 
 - `run_*.csv`: `t, x, y, yaw, v_cmd, w_cmd, delta_est, target_x, target_y, cte`
 - `path_*.csv`: Desired trajectory (`x, y`)
+
+To generate the plots and metrics of the latest run:
+
+```bash
+python3 tools/plot_results.py
+```
+
+The figures are saved in `~/ackermann_results/figures/`. This requires `python3-pandas` and `python3-matplotlib`.
 
 ---
 
