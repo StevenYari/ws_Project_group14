@@ -198,6 +198,8 @@ Trajectory: figure-eight, `a = 3 m`, velocity = 0.4 m/s. Cross-track error is me
 
 The RMSE value printed by the node (0.064 m with L_d = 0.6 m) is slightly higher than the value in the table because it measures the distance to the closest trajectory point rather than to the closest trajectory segment.
 
+![Lookahead comparison](docs/lookahead_comparison.png)
+
 ### Data Logging
 
 Each simulation run saves its results in `~/ackermann_results/`:
