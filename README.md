@@ -274,21 +274,6 @@ The figures are saved in `~/ackermann_results/figures/`. This requires `python3-
 
 ---
 
-## 8. Troubleshooting
-
-| Problem | Solution |
-|---|---|
-| `Package 'ackermann_description' not found` | Run `source install/setup.bash` in that terminal. |
-| Gazebo closes with `Segmentation fault` in `VisualizeLidar` and messages about `OmniTeleop` | Corrupted GUI configuration: `mv ~/.gz/sim/8/gui.config ~/.gz/sim/8/gui.config.bak` |
-| The Gazebo window fails on Ubuntu with Wayland | Launch with `QT_QPA_PLATFORM=xcb ros2 launch ...` |
-| Warnings `VMware: No 3D enabled` or `libEGL warning` | The system is a virtual machine without 3D acceleration: it works, but more slowly. |
-| The controller starts before the robot appears | Increase the delay: `delay:=20`. |
-| `path_type:=infinity` raises a parameter type error | Use `lemniscate` instead. |
-| The robot does not move | Check `ros2 topic list` (`/cmd_vel`, `/odom`, `/tf`, `/clock`, `/joint_states`) and `ros2 topic echo /odom --once`. |
-| A new simulation starts where the previous one ended | Stop the previous launch with `Ctrl+C` before starting another one. |
-
----
-
-## 9. License
+## 8. License
 
 MIT License.
