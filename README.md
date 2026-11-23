@@ -2,7 +2,7 @@
 
 Ackermann-steered mobile robot modeled in Autodesk Fusion 360 and exported to Xacro/URDF. The robot is simulated in Gazebo Harmonic and controlled by a ROS 2 node implementing the Pure Pursuit algorithm, which follows a figure-eight trajectory (Bernoulli lemniscate).
 
-**Team Members:** _Steven Yari_, _Cristhian Aldean_, _Alexa Marin_  
+**Team Members:** _Steven Yari_, _Cristhian Ortiz_, _Alexa Marin_  
 **Course:** Mobile and Articulated Robots, ESPOL
 
 ---
